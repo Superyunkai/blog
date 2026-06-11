@@ -14,7 +14,7 @@ on:
 env:
   TZ: Asia/Shanghai
   # GitHub Pages 项目页仓库名；如果仓库是 lava.github.io，请改为空字符串。
-  REPOSITORY_NAME: 
+  REPOSITORY_NAME: blog
 
 # 权限设置
 permissions:
