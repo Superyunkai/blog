@@ -7,8 +7,8 @@ const blogTheme = getThemeConfig({
   // 默认开启 pagefind 离线全文搜索支持（如使用其它的可以设置为 false）
   // search: false,
 
-  // 默认关闭 markdown 图表支持（开启会增加一定的构建耗时）
-  // mermaid: false,
+  // 开启 markdown mermaid 图表支持。
+  mermaid: true,
 
   footer: {
     copyright: 'MIT License | Lava'
