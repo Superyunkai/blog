@@ -6,7 +6,7 @@ BUILD_DIR="docs/.vitepress/dist"
 REMOTE="${PAGES_REMOTE:-origin}"
 
 rm -rf "$BUILD_DIR"
-pnpm build
+GITHUB_ACTIONS=true REPOSITORY_NAME="${REPOSITORY_NAME:-blog}" pnpm build
 
 if [[ ! -d "$BUILD_DIR" ]]; then
   echo "Build output not found: $BUILD_DIR" >&2
