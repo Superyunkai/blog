@@ -156,6 +156,65 @@ memcpy(C->stack, &dummy, C->size);
 
 它根据 `S->running` 找到当前协程，调用用户函数。用户函数返回后，说明协程生命周期结束，`mainfunc` 会释放协程对象、清空数组槽位、减少协程计数并重置运行状态。
 
+## 原理探究
+
+这个库中实现主要依赖 ucontext库，该库是早期Linux提供的用户态上下文切换库。
+
+理解这个库之前，我们需要先理解一个线程的执行状态。
+
+线程的执行状态由 CPU寄存器、RIP（PC指针）、RSP（SP指针）、RPB 、RAX～R15 + 栈空间组成，将这些信息的集合称为context（上下文）。如果能把这些信息记录下来，那么就可以实现协程的切换。
+
+核心数据结构：
+
+```C
+typedef struct ucontext {
+   sturct ucontext *uc_link;      // 切换到哪个协程
+   sigset_t uc_sigmask;
+   stack_t uc_stack;             // 栈指针
+   mcontext_t uc_context;        // 寄存器状态
+}ucontext_t;
+
+struct uc_stack{
+ void* ss_sp; // 栈顶指针
+ size_t ss_size;	
+}
+```
+
+重要函数
+
+1. getcontext(context_t* ucp)
+
+   获取当前的上下文，保存当前的寄存器、栈指针、RIP、信号屏蔽字。执行完之后uc p中就保存了当前的执行状态
+
+2. setcontext(context_t* ucp)
+
+   恢复执行现场，会将ucp中的状态设置到为当前的执行状态，从而实现执行。这里比较特殊的是setcontext后就不会正常返回了，因为已经改变了PC指针
+
+3. makecontext()
+
+   它不是保存当前现场，而是先构造一个将要进入的现场。典型使用方式：
+
+   ```
+   getcontext(&ctx);
+   ctx.uc_stack.ss_sp = stackl
+   ctx.uc_stack.ss_size = size;
+   ctx.uc_link = &main_ctx;
+   makecontext(&ctx,func, 0);
+   ```
+
+4. swapcontext(ucontext_t *old, ucontext_t *new)
+
+   保存当前现场，切换到新现场
+
+   
+
+## 局限性分析
+
+1. 性能问题：context库由于设计比较老且本身是为了signal、longjmp、exception recorver，不是为了协创，保存了太多不必要的状态（一些不重要的寄存器，事实上看，重要的就是RSP和RIP等）和信号量
+
+2. ABI兼容问题：各个平台的寄存器数量规格不同、栈布局不同、调用约定不同，很难维护
+3. 无法利用现代CPU的特性
+
 ## 小结
 
 `cloudwu/coroutine` 的价值在于用最少概念呈现协程本质：上下文切换、状态机和栈保存。它不是完整运行时，但非常适合作为理解协程实现的第一份源码。
